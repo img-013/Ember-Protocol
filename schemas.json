@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Ember Protocol runtime contracts",
+  "version": 3,
+  "$defs": {
+    "Command": {
+      "type": "object",
+      "required": [
+        "id",
+        "type",
+        "issuedTick",
+        "executeTick",
+        "sequence",
+        "payload",
+        "source"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "BUILD",
+            "ZONE",
+            "HARVEST",
+            "MOVE",
+            "PERSON",
+            "CANCEL",
+            "DEMOLISH",
+            "POLICY",
+            "RESEARCH",
+            "TOGGLE",
+            "RENAME",
+            "APPROVE"
+          ]
+        },
+        "issuedTick": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "executeTick": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "payload": {
+          "type": "object"
+        },
+        "source": {
+          "const": "player"
+        }
+      }
+    },
+    "Job": {
+      "type": "object",
+      "required": [
+        "id",
+        "kind",
+        "state",
+        "owner",
+        "work",
+        "path",
+        "reservation",
+        "escrow",
+        "sourceFactIds",
+        "history"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "AVAILABLE",
+            "MOVING",
+            "EXECUTING",
+            "BLOCKED",
+            "COMPLETED",
+            "CANCELLED"
+          ]
+        },
+        "work": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "path": {
+          "type": "array"
+        },
+        "sourceFactIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "Fact": {
+      "type": "object",
+      "required": [
+        "id",
+        "tick",
+        "type",
+        "text",
+        "actors",
+        "objects",
+        "causes",
+        "metrics"
+      ]
+    },
+    "SaveEnvelope": {
+      "type": "object",
+      "required": [
+        "schemaVersion",
+        "buildVersion",
+        "contentVersion",
+        "state",
+        "hash",
+        "origin"
+      ],
+      "properties": {
+        "schemaVersion": {
+          "const": 3
+        },
+        "contentVersion": {
+          "const": "ember-0.9.0"
+        },
+        "hash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}$"
+        },
+        "state": {
+          "type": "object"
+        }
+      }
+    }
+  }
+}

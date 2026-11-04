@@ -1,0 +1,380 @@
+余烬协议
+真实因果链开发实施规范
+交付给开发者的可执行工程说明 · v0.1 · 2026-11-04
+本文件用途开发者仅凭本文件与现有策划内容库，即可理解系统边界、工程架构、实施顺序、运行时对象、保存/诊断/复现要求，以及下一次交付必须提供的证据。
+
+不可降低的完成标准以后每增加一个系统，不以“面板能打开”为完成，而以“它能参与一条真实、可保存、可诊断、可复现的因果链”为完成。
+
+
+1. 交付目标与禁止事项
+本次开发目标不是继续增加展示面板，而是将现有单文件原型迁移为具备统一模拟真相的可持续工程，并完成一条可运行的“医疗停电”跨系统纵向切片。
+1.1 本次必须交付
+可直接启动的工程项目和构建后可运行版本。
+唯一权威GameState、固定步长GameClock、种子随机数服务、CommandBus、Event/FactBus。
+人物工作最小闭环：搬运、操作机器、饮食/休息任务。
+电力最小闭环：供需、负载组、医院关键负载、住宅限电、电池储备。
+事实、记忆、关系、Issue和Proposal的最小可运行链路。
+版本化存档、迁移入口、命令日志、回放与状态摘要哈希。
+统一检查器与诊断视图，能定位任务、电力和叙事链路的失败原因。
+自动测试、验收场景、交付说明和已知限制。
+1.2 明确禁止
+UI事件处理器直接修改人物、库存、电力、关系或纪事状态。
+使用setInterval作为模拟真相；模拟必须由固定Tick推进，渲染与模拟解耦。
+使用Math.random参与游戏结果；必须经SeededRNG并记录随机流或上下文。
+任务失败后静默消失；所有失败必须有原因码及相关实体ID。
+纪事文本直接创造未发生的事实。
+以本地时间、对象遍历不稳定顺序或浮点差异决定游戏结果。
+以“界面已存在”“数据已显示”作为系统完成证据。
+在垂直切片通过前扩展战斗、复杂义体、地下层、多人联机或生成式文本。
+2. 前人经验组合在本项目中的实现
+方向
+采用方法
+代码要求
+验收结果
+工业工程底座
+固定Tick、确定性、Chunk、休眠、批处理、原因诊断
+Simulation与Render分离；活跃列表；脏区；稳定排序；定点或明确舍入
+相同输入同哈希；大型场景仍可定位耗时
+注意力导演
+监控压力、间隔、未解决Issue，从真实事实中选取焦点
+NarrativeDirector只读查询；不能写库存/伤害/关系；输出NarrativeThread引用Fact ID
+叙事可追溯；恢复期和同类事件冷却有效
+事实积累
+Memory、Relationship、Trace、Legacy均引用来源事实
+所有长期变化带sourceFactIds；普通对象摘要，重要对象完整履历
+关系与纪事可解释；存档体积受控
+
+3. 建议工程结构
+首版仍可使用HTML、CSS、Canvas和原生JavaScript，但必须迁移为ES Modules。建议目录如下：
+/src  /app            bootstrap.js, gameLoop.js  /core           gameClock.js, seededRng.js, commandBus.js, factBus.js, ids.js  /state          gameState.js, queryService.js, stateHash.js  /content        catalogLoader.js, schemas.js, validators.js, migrations.js  /world          chunks.js, layers.js, occupancy.js  /items          itemDefs.js, inventory.js, reservations.js  /jobs           jobDefs.js, jobBoard.js, jobScoring.js, jobRunner.js  /path           regionGraph.js, localAStar.js, pathCache.js  /pawns          pawnSystem.js, needs.js, skills.js, schedules.js  /power          powerGrid.js, loads.js, sheddingPolicy.js, batteries.js  /social         facts.js, appraisal.js, memories.js, relationships.js, issues.js, proposals.js  /narrative      director.js, threads.js, renderer.js  /save           serializer.js, saveSchema.js, migrate.js, replay.js  /ui             router.js, inspector.js, diagnostics.js, overlays.js/tests             unit, integration, replay, save-load, performance/content           Excel导出的版本化JSON定义
+依赖方向UI → CommandBus/QueryService；Systems → GameState/FactBus；Narrative → QueryService/FactGraph。禁止UI写GameState，禁止Narrative写模拟资源，禁止系统相互直接修改私有状态。
+
+4. 权威运行时对象契约
+对象
+最小字段
+责任
+GameState
+schemaVersion, tick, seed, rngState, world, entities, inventories, jobs, power, facts, social, narrative
+唯一权威运行状态；禁止复制第二套可写状态
+Command
+id, type, issuedTick, actorId, payload, source, sequence
+表达玩家或AI意图；按sequence稳定排序
+CommandResult
+commandId, status, reasonCode, affectedIds, factIds
+记录成功、失败、取消和影响对象
+Job
+id, defId, issuerId, priority, targetIds, requirements, state, reservations, assignedPawnId, reasonCode
+工作调度的正式状态机
+Reservation
+id, ownerJobId, targetId, kind, quantity, expiresTick
+防止重复认领物品、目标和工作位
+Fact
+id, type, tick, actors, placeId, objectIds, causes, metrics, tags
+客观发生的不可变事实
+Memory
+id, ownerId, factId, appraisal, intensity, createdTick, decayModel
+某人物对事实的主观理解
+RelationshipEdge
+fromId, toId, dimensions, reasonFactIds, lastChangedTick
+稀疏关系边；变化可追因
+Issue
+id, type, severity, evidenceFactIds, unresolvedSince, status
+跨Tick未解决矛盾
+Proposal
+id, authorId, triggerFactIds, requirements, expectedEffects, status
+人物基于事实提出的方案
+SaveEnvelope
+schemaVersion, buildVersion, contentVersion, state, commandTail, hash
+版本化存档封装
+
+5. 标准因果链执行协议
+步骤
+实现要求
+定义加载
+从Excel导出的JSON加载Definition；完成Schema、ID唯一性、跨表引用、枚举和范围验证。失败时阻止进入游戏并输出精确表名/行ID/字段。
+命令生成
+玩家操作和AI决策均生成Command。命令只表达意图，不提前修改状态。
+命令验证
+验证前置条件、权限、资源、目标存在性、范围和政策。返回结构化reasonCode。
+预留
+对人物、物品、目标格、设备工作位和输出空间建立Reservation。预留失败不得部分执行。
+执行
+JobRunner按状态机推进；移动、操作、搬运、等待均为明确状态。
+状态改变
+仅对应系统在固定Tick阶段修改自己拥有的状态。跨系统使用Fact或Command。
+事实生成
+成功、失败、取消、抢占和政策执行均可产生Fact；Fact不可变。
+社会评价
+Appraisal根据人物价值观、关系、地点和受影响程度生成Memory；关系变化引用Fact ID。
+查询与UI
+UI通过QueryService读取快照，展示“发生了什么、为什么、如何处理”。
+保存与读取
+保存权威状态及必要日志；缓存和索引读档后重建。读档后下一Tick与连续运行一致。
+回放与哈希
+新局只使用seed+初始定义+CommandLog回放；关键Tick生成稳定摘要哈希。
+诊断
+检查器可从UI对象反查Command、Job、Reservation、Fact、Memory和后续影响。
+
+6. 人物工作闭环制作手顺
+6.1 仅先实现三类JobDef
+JobDef
+发布者
+必要预留
+完成事实
+典型失败码
+HAUL_ITEM
+蓝图、仓库、机器
+人物、物品数量、取货目标、送达库存容量
+ITEM_MOVED
+NO_PATH, ITEM_GONE, OUTPUT_FULL, RESERVATION_LOST
+OPERATE_MACHINE
+机器生产请求
+人物、机器工作位、配方输入、输出容量
+MACHINE_OPERATION_COMPLETED
+POWER_LOST, INPUT_MISSING, OUTPUT_FULL, OPERATOR_UNAVAILABLE
+SATISFY_NEED
+人物NeedSystem
+人物、食物/床/设施使用位
+NEED_SATISFIED
+NO_RESOURCE, NO_PATH, FACILITY_OCCUPIED, POLICY_BLOCKED
+
+建立JobBoard，按区域、类型和优先级索引；禁止每个人物每Tick扫描全部任务。
+候选评分至少包含：政策优先级、人物工作优先级、技能匹配、距离、当前需求、部门职责和抢占成本。
+只有空闲、任务失效、被抢占或关键需求触发的人物重新选择工作。
+人物认领前一次性验证并申请预留；预留必须可释放、超时和重建。
+路径计算采用区域连通图+局部A*；地图Chunk变脏时只使相关路径缓存失效。
+Job状态至少包括AVAILABLE、RESERVED、MOVING、EXECUTING、BLOCKED、COMPLETED、CANCELLED。
+任务详情面板必须显示评分、预留、路径、当前状态、失败原因和下一次重试Tick。
+7. 医疗停电纵向切片制作手顺
+序号
+系统动作
+必须产生/改变
+验收观察点
+1
+PowerGrid计算发电、储能和负载需求
+PowerSnapshot
+供需数字与来源一致
+2
+SheddingPolicy按关键负载和优先级决定切断
+POWER_SHED Fact
+医院保供，住宅被限电；原因可查
+3
+受影响房间与人物建立Exposure
+人物环境修正
+能从人物反查停电影响
+4
+工程师获得修复/线路任务
+Job + Reservation
+技能、位置和政策参与评分
+5
+Job执行或失败
+REPAIR_COMPLETED或JOB_FAILED Fact
+失败原因可见且可重规划
+6
+Appraisal解释同一事实
+多人物Memory
+安全/公平/家庭/效率产生不同评价
+7
+RelationshipSystem应用变化
+稀疏关系边+reasonFactIds
+无无来源跳变
+8
+IssueSystem识别持续风险
+HOSPITAL_POWER_RISK Issue
+证据和持续时间可查看
+9
+ProposalSystem评估条件
+MICROGRID Proposal
+作者、触发事实和资源要求可查
+10
+玩家批准并建造
+Command→Job链→设施状态
+不是按钮直接生成建筑
+11
+问题解决并形成Legacy
+ISSUE_RESOLVED Fact + Legacy
+历史页能完整追溯
+12
+中途保存/读取/回放
+相同摘要哈希
+下一Tick行为和事实ID一致
+
+8. 存档、迁移与确定性
+存档格式必须包含schemaVersion、buildVersion、contentVersion、tick、seed、rngState、GameState、最近命令日志和摘要哈希。
+不要序列化DOM、Canvas、函数、循环引用、路径缓存、空间索引和可从权威状态重建的派生缓存。
+每次Schema变化提供migrate_vN_to_vNplus1；禁止静默丢弃字段。迁移失败必须保留原存档并输出错误。
+实体ID、Fact ID和Command ID使用确定性序列生成，不使用当前系统时间和随机UUID。
+所有集合在影响模拟结果前按稳定键排序；浮点数进入哈希前按明确精度量化。
+保存测试必须覆盖MOVING、EXECUTING、BLOCKED、断电、预留中、事件链进行中。
+9. 诊断与检查器
+检查对象
+必须回答
+人物
+当前需求、日程、任务、选择该任务的评分、路径、预留、阻塞原因、相关事实
+任务
+发布者、目标、候选、认领者、状态转换历史、失败原因、重试策略
+机器
+配方、输入、输出、电力、操作员、停机原因、最近完成事实
+电网
+发电、储能、负载组、限电顺序、政策来源、被切断实体
+人物记忆
+来源Fact、评价规则、强度、衰减、造成的关系变化
+纪事条目
+引用的全部Fact ID、时间范围、参与者、无来源文本检查
+存档/回放
+Schema、内容版本、Tick、命令数、哈希、迁移历史
+
+三问标准所有问题面板必须同时回答：①现在怎么了；②为什么；③玩家可以采取什么行动。仅显示红色警告或单个数值不算诊断完成。
+
+10. Excel内容库工程映射规则
+每张工作表导出为独立版本化定义集合；每行对象保留原稳定ID，不以数组下标作为运行时引用。
+建立DefinitionRegistry，按ID查询；禁止业务系统直接依赖Excel列位置。
+导入后执行四类校验：Schema、唯一ID、外键引用、业务约束。
+每个对象暴露mappingLevel：IMPORTED、VALIDATED、EXECUTABLE、CLOSED_LOOP。
+内容数据只读；运行时状态使用definitionId引用定义。
+“待讨论”条目默认不可进入正式运行逻辑，除非存在明确fallback并在诊断中标记。
+新增行可扩展内容，删除或改ID必须提供迁移映射。
+状态
+开发含义
+交付证据
+IMPORTED
+已从Excel进入JSON
+对象数量与原表一致
+VALIDATED
+字段与引用有效
+校验报告无错误
+EXECUTABLE
+系统正式读取并改变状态
+至少一个自动测试和运行演示
+CLOSED_LOOP
+可保存、诊断、回放
+垂直切片和哈希证据
+
+11. 自动测试与验收标准
+测试
+场景
+通过标准
+确定性
+同seed、同内容版本、同CommandLog运行10000 Tick
+关键Tick和最终状态摘要哈希完全一致
+任务预留
+两人竞争同一物品/工作位
+仅一人成功；另一人收到RESERVATION_LOST并重选
+路径失效
+移动中封门或拆除目标
+局部缓存失效；任务BLOCKED/取消；无死循环
+仓库满
+机器生产时输出容量变为零
+机器停机并显示OUTPUT_FULL；资源守恒
+断电
+操作机器时电力丢失
+任务中断或等待；恢复后继续；无重复产出
+需求抢占
+人物工作中饮食跌破阈值
+按政策决定是否抢占；原因可查
+读档
+MOVING/EXECUTING/事件链中保存
+读取后下一Tick与连续运行一致
+叙事真实性
+生成医疗停电纪事
+每个陈述可追溯Fact；不得出现未发生伤害
+性能
+300×300、目标人物和实体规模的基准场景
+达到约定TPS；各系统耗时可显示
+长时稳定
+72小时加速模拟或等价自动压力测试
+无任务死锁、无未释放预留、事实量受预算控制
+
+12. 实施迭代与提交顺序
+迭代
+工作内容
+退出条件
+Sprint A：权威状态
+拆分模块；GameClock/RNG/CommandBus/FactBus；DefinitionRegistry
+暂停正确；UI不直接写状态；同输入同哈希
+Sprint B：人物工作
+JobBoard/Reservation/三类Job/局部寻路/原因码
+搬运、操作、生活任务均可中断恢复和诊断
+Sprint C：电力与政策
+供需、负载组、限电、电池、关键负载
+医院保供和住宅限电由真实状态产生
+Sprint D：社会因果
+Fact/Appraisal/Memory/Relationship/Issue/Proposal
+同一事实产生不同评价，关系变化有来源
+Sprint E：保存与回放
+SaveEnvelope、迁移、命令回放、哈希
+关键状态读档一致；回放一致
+Sprint F：医疗停电验收
+完整纵向切片、UI检查器、覆盖层、历史页
+无需二择弹窗形成至少3种真实结果
+
+13. 下次交付包必须包含
+源代码工程，不接受只有合并后的HTML。
+可运行构建版本或明确的一键启动脚本。
+README：启动方法、目录说明、存档位置、浏览器要求。
+内容Schema、Excel导出结果及校验入口。
+自动测试与一键测试命令。
+“医疗停电”演示存档和对应CommandLog。
+诊断截图或录屏，展示任务原因、电网限电原因、Fact到Memory链路。
+两次独立回放的摘要哈希结果。
+存档Schema版本和迁移说明。
+已完成功能按L1-L4标注，不得用“界面完成”替代闭环状态。
+已知问题、性能预算和下一步计划。
+拒收条件出现任一情况即退回：按钮无反应或控制台错误；UI直接修改模拟；读档丢任务/预留/事实；相同回放结果不一致；任务失败无原因；纪事出现无Fact来源的内容；只提交单文件且无法定位模块和测试。
+
+14. 开发完成定义（Definition of Done）
+维度
+必须满足
+功能可用
+真实影响GameState，并有完整成功/失败路径
+状态可观察
+检查器和覆盖层可查看权威状态
+结果可解释
+变化能追溯到Command、规则、Fact和来源ID
+存档可恢复
+关键中间态读取后行为一致
+失败可诊断
+结构化原因码、相关实体、建议行动
+结果可复现
+固定seed和CommandLog产生一致哈希
+性能有预算
+更新频率、休眠、批处理和基准数据明确
+内容可扩展
+新增定义主要通过内容库，不修改核心路径
+回归受保护
+自动测试覆盖正常、边界、失败和读档场景
+
+15. 开发者开工前应提交的设计确认
+开发者在编码前先提交以下简短设计，不需要等待逐项确认，但其内容将作为代码评审依据：
+模块依赖图和GameState所有权表。
+Command、Job、Reservation、Fact和SaveEnvelope的实际Schema。
+固定Tick阶段顺序，以及每个系统在哪一阶段读写什么。
+医疗停电链路的事件序列图。
+哈希字段范围、浮点量化和稳定排序策略。
+目标浏览器、性能预算和基准场景。
+附录A：推荐原因码
+领域
+原因码
+通用
+INVALID_COMMAND, TARGET_GONE, PERMISSION_DENIED, POLICY_BLOCKED
+任务
+NO_CANDIDATE, RESERVATION_LOST, PREEMPTED, RETRY_LIMIT
+路径
+NO_PATH, PATH_INVALIDATED, DANGER_BLOCKED
+库存
+INPUT_MISSING, OUTPUT_FULL, STORAGE_REJECTED
+电力
+POWER_LOST, LOAD_SHED, BATTERY_EMPTY
+人物
+NEED_CRITICAL, SCHEDULE_BLOCKED, INCAPACITATED
+存档
+SCHEMA_UNSUPPORTED, MIGRATION_FAILED, CONTENT_VERSION_MISMATCH
+叙事
+MISSING_SOURCE_FACT, INVALID_CAUSAL_LINK, ACTOR_NOT_FOUND
+
+附录B：参考资料
+Dwarf Fortress开发访谈索引：https://dwarffortresswiki.org/index.php/List_of_Dwarf_Fortress_developer_interviews
+Dwarf Fortress长期工程访谈：https://stackoverflow.blog/2021/07/28/700000-lines-of-code-20-years-and-one-developer-how-dwarf-fortress-is-built/
+Dwarf Fortress设计访谈：https://www.youtube.com/watch?v=VAhHkJQ3KgY
+Factorio开发日志：https://www.factorio.com/blog/
+RimWorld开发日志：https://ludeon.com/blog/

@@ -1,0 +1,238 @@
+{
+  "version": "ember-0.9.0",
+  "items": {
+    "metal": {
+      "name": "金属",
+      "stack": 75,
+      "color": "#929381"
+    },
+    "parts": {
+      "name": "零件",
+      "stack": 50,
+      "color": "#b89a72"
+    },
+    "food": {
+      "name": "食物",
+      "stack": 40,
+      "color": "#9aa36c"
+    },
+    "medicine": {
+      "name": "药品",
+      "stack": 25,
+      "color": "#82aaa0"
+    },
+    "wood": {
+      "name": "木材",
+      "stack": 75,
+      "color": "#9d815e"
+    },
+    "stone": {
+      "name": "石料",
+      "stack": 100,
+      "color": "#8b8c7d"
+    }
+  },
+  "buildings": {
+    "HQ": {
+      "name": "指挥舱",
+      "cost": {},
+      "power": 0,
+      "work": 1,
+      "color": "#af9471",
+      "icon": "◆"
+    },
+    "SOLAR": {
+      "name": "太阳能阵列",
+      "cost": {
+        "metal": 20,
+        "parts": 5
+      },
+      "power": 35,
+      "work": 110,
+      "color": "#788e91",
+      "icon": "▱"
+    },
+    "BATTERY": {
+      "name": "蓄电池",
+      "cost": {
+        "metal": 16,
+        "parts": 8
+      },
+      "power": 0,
+      "capacity": 6000,
+      "work": 100,
+      "color": "#94a17b",
+      "icon": "▣"
+    },
+    "MINE": {
+      "name": "采矿站",
+      "cost": {
+        "metal": 25,
+        "parts": 5
+      },
+      "power": -10,
+      "work": 140,
+      "color": "#8b8370",
+      "icon": "矿",
+      "recipe": "RECYCLE"
+    },
+    "FARM": {
+      "name": "藻类农场",
+      "cost": {
+        "metal": 18,
+        "parts": 6
+      },
+      "power": -8,
+      "work": 110,
+      "color": "#738e69",
+      "icon": "田",
+      "recipe": "GROW"
+    },
+    "WORKSHOP": {
+      "name": "零件工坊",
+      "cost": {
+        "metal": 30,
+        "parts": 10
+      },
+      "power": -18,
+      "work": 160,
+      "tech": "MACHINING",
+      "color": "#9b866f",
+      "icon": "⚙",
+      "recipe": "PARTS"
+    },
+    "CLINIC": {
+      "name": "医疗站",
+      "cost": {
+        "metal": 35,
+        "parts": 15
+      },
+      "power": -22,
+      "work": 180,
+      "tech": "MEDICINE",
+      "color": "#85a59b",
+      "icon": "+",
+      "recipe": "MEDICINE"
+    },
+    "HOUSE": {
+      "name": "居住舱",
+      "cost": {
+        "metal": 20,
+        "parts": 8
+      },
+      "power": -6,
+      "work": 120,
+      "color": "#9c927e",
+      "icon": "⌂"
+    },
+    "BEACON": {
+      "name": "信标塔",
+      "cost": {
+        "metal": 55,
+        "parts": 30
+      },
+      "power": -35,
+      "work": 240,
+      "tech": "SIGNAL",
+      "color": "#b19875",
+      "icon": "△"
+    },
+    "WALL": {
+      "name": "石墙",
+      "cost": {
+        "stone": 5
+      },
+      "power": 0,
+      "work": 40,
+      "color": "#797e73",
+      "icon": ""
+    }
+  },
+  "recipes": {
+    "RECYCLE": {
+      "input": {},
+      "output": {
+        "metal": 4
+      },
+      "ticks": 180,
+      "source": "邻近有限金属矿藏，每批消耗4单位",
+      "skill": "build"
+    },
+    "GROW": {
+      "input": {},
+      "output": {
+        "food": 6
+      },
+      "ticks": 200,
+      "source": "藻类生长",
+      "skill": "care"
+    },
+    "PARTS": {
+      "input": {
+        "metal": 4
+      },
+      "output": {
+        "parts": 2
+      },
+      "ticks": 160,
+      "skill": "tech"
+    },
+    "MEDICINE": {
+      "input": {
+        "food": 3,
+        "parts": 1
+      },
+      "output": {
+        "medicine": 2
+      },
+      "ticks": 200,
+      "skill": "care"
+    }
+  },
+  "techs": {
+    "MACHINING": {
+      "name": "精密加工",
+      "cost": 20,
+      "pre": [],
+      "unlock": "零件工坊"
+    },
+    "MEDICINE": {
+      "name": "基础医疗",
+      "cost": 25,
+      "pre": [],
+      "unlock": "医疗站、药品生产和治疗"
+    },
+    "SIGNAL": {
+      "name": "信号工程",
+      "cost": 50,
+      "pre": [
+        "MACHINING"
+      ],
+      "unlock": "信标塔"
+    }
+  },
+  "policies": {
+    "power": {
+      "name": "限电次序",
+      "options": [
+        "critical",
+        "production"
+      ],
+      "labels": [
+        "医疗与生活优先",
+        "生产设施优先"
+      ]
+    },
+    "work": {
+      "name": "需求抢占",
+      "options": [
+        "care",
+        "balanced"
+      ],
+      "labels": [
+        "生活优先（需求低于35）",
+        "均衡（需求低于20）"
+      ]
+    }
+  }
+}

@@ -1,0 +1,55 @@
+[
+  {
+    "id": "C1",
+    "sequence": 1,
+    "issuedTick": 0,
+    "executeTick": 1,
+    "type": "BUILD",
+    "payload": {
+      "type": "SOLAR",
+      "x": 11,
+      "y": 8
+    },
+    "source": "player"
+  },
+  {
+    "id": "C2",
+    "sequence": 2,
+    "issuedTick": 1,
+    "executeTick": 2,
+    "type": "BUILD",
+    "payload": {
+      "type": "FARM",
+      "x": 11,
+      "y": 10
+    },
+    "source": "player"
+  },
+  {
+    "id": "C3",
+    "sequence": 3,
+    "issuedTick": 2,
+    "executeTick": 3,
+    "type": "ZONE",
+    "payload": {
+      "type": "stock",
+      "x": 18,
+      "y": 9,
+      "w": 2,
+      "h": 3
+    },
+    "source": "player"
+  },
+  {
+    "id": "C4",
+    "sequence": 4,
+    "issuedTick": 403,
+    "executeTick": 404,
+    "type": "POLICY",
+    "payload": {
+      "key": "work",
+      "value": "care"
+    },
+    "source": "player"
+  }
+]
