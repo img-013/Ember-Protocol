@@ -1,20 +1,351 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>余烬协议 · v0.9.0</title>
-<link rel="stylesheet" href="./game.css">
-</head>
-<body>
-<header><strong>余烬协议</strong><span class="version">v0.9.0 · 因果闭环</span><span id="clockText"></span><div class="spacer"></div><button data-speed="0">暂停</button><button data-speed="1">1×</button><button data-speed="3">3×</button><button id="saveBtn">保存</button><button id="loadBtn">读取</button><button id="importBtn">导入</button><button id="exportBtn">导出</button><button id="helpBtn">帮助</button></header>
-<div id="resources" class="resources"></div>
-<main>
-<aside><nav id="menus"><button data-panel="build">规划</button><button data-panel="people">人员</button><button data-panel="research">研究与政策</button><button data-panel="history">纪事</button><button data-panel="diagnostics">诊断</button></nav><div id="sidebar"></div></aside>
-<section class="world"><div id="tools"><button data-tool="inspect">查看</button><button data-tool="harvest">框选采集</button><button data-tool="stock">框选储存区</button><button data-tool="home">框选居住区</button><button data-tool="move">指挥移动</button></div><canvas id="map" aria-label="聚落地图"></canvas><p id="mapHint">选择规划设施或拖动框选。点击人物查看任务。</p><div id="issues"></div><div id="notice" role="status"></div><div id="proposals"></div></section>
-<aside><h2>检查器</h2><div id="inspector"></div><h2>任务队列</h2><div id="jobs"></div></aside>
-</main>
-<footer><span id="summary"></span><button id="replayBtn">验证本局回放</button><button id="newBtn">新聚落</button><a href="./L4-REPORT.md" target="_blank">验收范围</a></footer>
-<dialog id="dialog"><form method="dialog"><button>关闭</button></form><h2 id="dialogTitle"></h2><div id="dialogBody"></div></dialog>
-<input type="file" id="importFile" accept=".json" hidden>
-<script type="module" src="./client.js"></script>
-</body></html>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>余烬协议 · 殖民地工业纪事 · 开发骨架 · v0.9.1 原界面恢复</title>
+  <style>
+    :root {
+      --bg: #171914;
+      --panel: rgba(28, 29, 24, .94);
+      --panel-2: rgba(44, 44, 35, .96);
+      --panel-3: #5f5b49;
+      --line: #8b846a;
+      --line-dark: #171812;
+      --text: #eee9d7;
+      --muted: #b7b19c;
+      --accent: #d5b965;
+      --good: #93c47d;
+      --warn: #e0a256;
+      --danger: #d96b62;
+      --tile: 48px;
+      --shadow: 0 2px 0 #0b0c09, 0 5px 18px rgba(0,0,0,.38);
+      --ui-font: Inter, "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      color: var(--text);
+      background: var(--bg);
+      font-family: var(--ui-font);
+      user-select: none;
+    }
+    button, input, select { font: inherit; }
+    button { color: inherit; }
+    button:focus-visible { outline: 2px solid #f2d676; outline-offset: 2px; }
+
+    .game-shell {
+      position: relative;
+      width: 100%; height: 100%; min-width: 960px; min-height: 600px;
+      isolation: isolate;
+      background: #273126;
+    }
+
+    /* Main viewport */
+    .viewport { position: absolute; inset: 0; overflow: hidden; cursor: grab; }
+    .viewport.is-dragging { cursor: grabbing; }
+    .map-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .map-vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 100px rgba(0,0,0,.35); }
+
+    /* Shared UI surfaces */
+    .surface {
+      background: linear-gradient(180deg, rgba(64,64,51,.98), rgba(34,35,28,.98));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow), inset 0 1px rgba(255,255,255,.08);
+    }
+    .bevel-button {
+      border: 1px solid #8c8469;
+      border-bottom-color: #171812;
+      background: linear-gradient(#5a5848, #35362d);
+      box-shadow: inset 0 1px rgba(255,255,255,.12), 0 2px 4px rgba(0,0,0,.45);
+      min-height: 34px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .bevel-button:hover { filter: brightness(1.13); }
+    .bevel-button:active, .bevel-button.active { transform: translateY(1px); background: linear-gradient(#32332b, #545242); color: #fff4bd; }
+    .icon { width: 18px; text-align: center; display: inline-block; }
+
+    /* Top resource strip */
+    .topbar {
+      position: absolute; z-index: 20; left: 10px; top: 8px; right: 10px;
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+      pointer-events: none;
+    }
+    .resource-strip, .top-actions { pointer-events: auto; }
+    .resource-strip {
+      display: flex; flex-wrap: wrap; gap: 2px; max-width: 70%;
+      padding: 4px;
+    }
+    .resource {
+      display: flex; align-items: center; gap: 6px; min-width: 86px;
+      padding: 5px 8px; color: #f5f0dd; font-size: 13px;
+      background: rgba(18,19,15,.72); border: 1px solid rgba(160,151,119,.38);
+    }
+    .resource strong { margin-left: auto; color: #fff; font-variant-numeric: tabular-nums; }
+    .top-actions { display: flex; align-items: stretch; gap: 4px; }
+    .date-card { text-align: right; padding: 6px 10px; min-width: 180px; font-size: 12px; line-height: 1.35; }
+    .date-card strong { display: block; color: #fff7cf; font-size: 13px; }
+
+    /* Colonist portraits */
+    .colonists {
+      position: absolute; z-index: 18; top: 69px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px;
+    }
+    .colonist {
+      position: relative; width: 76px; padding: 5px 5px 7px; cursor: pointer;
+      text-align: center; font-size: 11px;
+    }
+    .colonist .portrait {
+      height: 50px; display: grid; place-items: center; font-size: 26px;
+      color: #192016; background: linear-gradient(145deg, #a7bd94, #697e61);
+      border: 1px solid #bbb499;
+    }
+    .colonist .name { margin-top: 4px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+    .colonist .mood { position: absolute; left: 5px; right: 5px; bottom: 3px; height: 3px; background: #2b2c24; }
+    .colonist .mood > i { display: block; height: 100%; background: var(--good); }
+    .colonist.selected { outline: 2px solid #f1d76f; }
+
+    /* Alerts */
+    .alerts {
+      position: absolute; z-index: 19; right: 12px; top: 74px; width: min(330px, 30vw);
+      display: grid; gap: 5px;
+    }
+    .alert {
+      display: flex; gap: 9px; align-items: center; padding: 8px 10px; cursor: pointer;
+      border-left: 5px solid var(--warn); font-size: 13px;
+    }
+    .alert.danger { border-left-color: var(--danger); }
+    .alert small { display: block; color: var(--muted); margin-top: 2px; }
+
+    /* Left message stack */
+    .event-log {
+      position: absolute; z-index: 15; left: 12px; bottom: 93px; width: 360px; max-height: 24vh;
+      display: flex; flex-direction: column-reverse; gap: 5px; pointer-events: none;
+    }
+    .event-line {
+      padding: 7px 9px; background: rgba(21,22,17,.78); border-left: 3px solid #c6b774;
+      font-size: 12px; text-shadow: 0 1px #000;
+    }
+    .event-line time { color: #aaa58f; margin-right: 8px; }
+
+    /* Inspector */
+    .inspector {
+      position: absolute; z-index: 18; right: 12px; bottom: 92px; width: 330px;
+      max-height: 46vh; overflow: hidden;
+    }
+    .panel-title {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      padding: 9px 11px; background: rgba(15,16,12,.58); border-bottom: 1px solid #77715d;
+    }
+    .panel-title h2 { font-size: 15px; margin: 0; }
+    .close { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 18px; }
+    .inspector-body { padding: 10px 12px 12px; }
+    .entity-head { display: flex; gap: 11px; align-items: center; margin-bottom: 10px; }
+    .entity-icon { width: 52px; height: 52px; display: grid; place-items: center; font-size: 29px; background: #70735b; border: 1px solid #aaa287; }
+    .entity-name strong { display: block; font-size: 16px; }
+    .entity-name span { color: var(--muted); font-size: 12px; }
+    .stat-grid { display: grid; grid-template-columns: 1fr auto; gap: 5px 15px; font-size: 12px; padding: 8px 0; border-top: 1px solid rgba(160,151,119,.25); }
+    .stat-grid dd, .stat-grid dt { margin: 0; }
+    .stat-grid dd { color: #fff8d2; }
+    .tabs { display: flex; gap: 3px; margin-top: 8px; }
+    .tabs button { flex: 1; padding: 6px 4px; font-size: 11px; }
+
+    /* Bottom command dock */
+    .bottom-dock {
+      position: absolute; z-index: 25; left: 0; right: 0; bottom: 0;
+      display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: end;
+      gap: 8px; padding: 7px 10px 9px;
+      background: linear-gradient(180deg, rgba(32,33,27,.82), rgba(15,16,13,.98));
+      border-top: 1px solid #857d65; box-shadow: 0 -4px 14px rgba(0,0,0,.35);
+    }
+    .speed-controls, .menu-row, .view-controls { display: flex; gap: 4px; }
+    .speed-controls button { width: 38px; padding-inline: 0; }
+    .menu-row { justify-content: center; min-width: 0; overflow: hidden; }
+    .menu-row button { min-width: 72px; white-space: nowrap; font-size: 12px; }
+    .view-controls button { min-width: 52px; }
+
+    /* Architect drawer */
+    .drawer {
+      position: absolute; z-index: 24; left: 10px; bottom: 62px; width: 570px; display: none;
+    }
+    .drawer.open { display: block; }
+    .drawer-content { display: grid; grid-template-columns: 156px 1fr; min-height: 260px; }
+    .category-list { padding: 6px; border-right: 1px solid #78715d; background: rgba(20,21,17,.58); }
+    .category-list button { width: 100%; display: block; text-align: left; margin-bottom: 3px; }
+    .build-grid { padding: 10px; display: grid; align-content: start; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+    .build-item { min-height: 68px; display: grid; place-items: center; gap: 2px; font-size: 12px; }
+    .build-item b { font-size: 21px; font-weight: 500; }
+
+    /* Bottom-left hover readout */
+    .tile-readout {
+      position: absolute; z-index: 17; left: 12px; bottom: 61px; padding: 6px 9px;
+      color: #ded9c6; background: rgba(15,16,13,.7); font-size: 11px; pointer-events: none;
+    }
+
+    /* Toast */
+    .toast {
+      position: absolute; z-index: 50; left: 50%; top: 18%; transform: translate(-50%, -12px);
+      padding: 9px 14px; opacity: 0; pointer-events: none; transition: .18s ease;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+    /* World overlay */
+    .world-overlay { position: absolute; z-index: 12; inset: 0; display: none; background: radial-gradient(circle at 50% 42%, #26382d, #111610 70%); }
+    .world-overlay.open { display: block; }
+    .planet {
+      position: absolute; left: 50%; top: 47%; width: min(70vw, 850px); aspect-ratio: 2 / 1; transform: translate(-50%,-50%);
+      border-radius: 50%; overflow: hidden; border: 2px solid #8f8c73; box-shadow: 0 18px 70px #000, inset -70px -20px 90px rgba(0,0,0,.7);
+      background-color: #728c69;
+      background-image:
+        radial-gradient(ellipse at 17% 34%, #b99a61 0 7%, transparent 8%),
+        radial-gradient(ellipse at 38% 66%, #4f7659 0 12%, transparent 13%),
+        radial-gradient(ellipse at 66% 35%, #9b8157 0 10%, transparent 11%),
+        radial-gradient(ellipse at 80% 72%, #d0c58d 0 8%, transparent 9%),
+        repeating-linear-gradient(30deg, transparent 0 17px, rgba(31,44,31,.13) 18px 19px),
+        repeating-linear-gradient(-30deg, transparent 0 17px, rgba(31,44,31,.13) 18px 19px);
+    }
+    .site-pin { position: absolute; left: 54%; top: 45%; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff4ae; background: #ca4f44; box-shadow: 0 0 0 6px rgba(235,211,114,.18); }
+    .world-title { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); text-align: center; text-shadow: 0 2px #000; }
+    .world-title h1 { margin: 0; font-size: 26px; letter-spacing: .08em; }
+    .world-title p { margin: 5px; color: var(--muted); }
+
+    @media (max-width: 1150px) {
+      .resource:nth-child(n+7) { display: none; }
+      .menu-row button { min-width: 58px; padding-inline: 7px; }
+      .inspector { width: 285px; }
+    }
+  
+/* expansion: preserve original UI and add systems */
+.boot{position:absolute;z-index:200;inset:0;background:#090b08f2;display:grid;place-items:center;padding:20px}.boot.hidden{display:none}.boot-card{width:min(1040px,94vw);max-height:92vh;overflow:auto;padding:16px}.boot h1{margin:0;color:#fff2b0}.boot-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.choice-group{padding:10px;background:#151711;border:1px solid #756f5b}.choice-group h3{margin:0 0 8px;color:#cfe6df}.choice-row{display:flex;flex-wrap:wrap;gap:6px}.choice{border:1px solid #77715f;background:#303429;padding:8px;cursor:pointer}.choice.selected{outline:2px solid var(--accent);background:#4b4633}.landing-map{position:relative;height:210px;background:linear-gradient(#4b6756,#857858 32%,#658060 55%,#b1a16d 75%,#778da0);border:1px solid #89836b;overflow:hidden}.landing-cell{position:absolute;width:28px;height:22px;border:1px solid #ffffff25;cursor:pointer}.landing-cell.selected{outline:3px solid #fff0a2;background:#d2554655}.roster{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.pawn-card{padding:7px;background:#20231d;border:1px solid #696553}.pawn-card b{color:#fff0b0}.pawn-card small{display:block;color:var(--muted)}.system-window{position:absolute;z-index:60;inset:58px 70px 78px;background:#11140ff5;display:none;overflow:auto;padding:12px}.system-window.open{display:block}.system-head{position:sticky;top:-12px;z-index:2;display:flex;justify-content:space-between;align-items:center;background:#282c24;padding:8px;border-bottom:1px solid #77715e}.system-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.sys-card{padding:8px;background:#20241d;border:1px solid #686551}.sys-card.locked{opacity:.45}.sys-card.done{border-color:#7bbb72;background:#20321f}.sys-card b{color:#bce1da}.recipe-list{font-size:11px;color:#c8c3b0;margin-top:4px}.zone-rect{position:absolute;z-index:10;border:2px solid #e8d36e;background:#e8d36e33;pointer-events:none}.world-panel{position:absolute;right:30px;top:90px;width:300px;padding:10px}.world-climates{display:grid;gap:5px}.climate-row{padding:7px;background:#171a15;border-left:4px solid #699474}.hidden-ui{visibility:visible;pointer-events:auto}.game-shell.hidden-ui>:not(.boot){visibility:hidden;pointer-events:none}.game-shell.hidden-ui>.boot{visibility:visible;pointer-events:auto}.person-detail{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:11px}.trait{display:inline-block;padding:2px 5px;margin:2px;background:#292d24;border:1px solid #706b58}.production-badge{color:#9dd78b}.boot-note{color:#e5b86b;font-size:12px}.start-button{width:100%;margin-top:12px;font-size:16px;background:linear-gradient(#776b3d,#453f2c)}
+</style>
+<style id="readableControls">
+button:not(:disabled),select{color:#f7f5e9;background-color:#35433e}button:hover:not(:disabled){filter:brightness(1.15);outline:1px solid #bbd7ae;outline-offset:-1px}button:focus-visible{outline:2px solid #ffe199!important;outline-offset:1px}button:active:not(:disabled){filter:brightness(.86);box-shadow:inset 0 0 0 2px #ffe3a0;translate:0 1px}.sys-card select,.po-window button,.treeTabs button,#lawOption,dialog button,#difficulty,#bootSlots,#resumeColony{background:#30443f!important;color:#fff9e9!important}.treeTabs{display:flex;gap:6px;margin-bottom:6px}.treeTabs button{padding:6px 15px}.treeTabs [aria-pressed="true"]{box-shadow:inset 0 -3px #edc883}.treeBoard .node{color:#f5f2df;transition:transform .12s,box-shadow .12s}.treeBoard .node.picked{transform:scale(1.055);z-index:2;background:#39594f;border-color:#f3cb80;box-shadow:0 0 0 2px #e7b865}.node.required{outline:2px solid #8dd3bd}.edges path.lit{stroke:#ffd17b;stroke-width:3.4}.miniFace{float:left;width:32px;height:32px;margin-right:5px}#founderFace{width:55px;height:55px}.healthParts{display:flex;gap:6px;flex-wrap:wrap}.healthParts span{background:#232d28;padding:4px 7px}.treeBoard button:disabled,button:disabled{cursor:not-allowed}button,pointer{touch-action:manipulation}
+</style></head>
+<body><style>
+.expDialog button,#founderEdit button{color:#fff8e5;background:#394b49;border:1px solid #9aaf9d;border-radius:4px}.expDialog button:focus-visible,.expDialog button:hover{outline:2px solid #dfc786}.expDialog button:disabled{color:#adb4ac;background:#293233}.expDialog svg,#landingMap svg{display:block;width:100%;height:100%}#landingMap{height:auto;aspect-ratio:257/144;background:#2b3935}#landingMap g,#atlas g{cursor:pointer}#atlas{max-height:40vh;aspect-ratio:257/144;margin:auto}#crewPick{min-width:9em;vertical-align:middle}.portrait svg,.entity-icon svg{height:100%;max-width:100%}#diagBtn,#dataBtn,#menuBtn{display:none!important}#architectDrawer .build-grid{overflow-y:scroll;max-height:min(42vh,330px);align-content:start;scrollbar-gutter:stable}#inspector .stat-grid{max-height:22vh;overflow:auto}#techGrid{display:block}.treeScroll{overflow:auto;height:40vh;background:#202925}.treeBoard{position:relative}.edges{position:absolute;width:100%;height:100%;stroke:#819c88;stroke-width:1.5;fill:none}.node{position:absolute;width:118px;height:36px;color:#bcc5bc;background:#39423c;border:1px solid #647065;text-align:left}.node.ready{color:#fff2cc;border-color:#b6a276}.node.done{background:#3f6958;color:white}.node svg{width:16px;height:16px;vertical-align:middle;margin-right:5px}#studyInfo,#foundSkills{padding:10px;background:#192422;color:#f4e8c9}#sheetText{line-height:1.7}.viewport{touch-action:none}#savePanel.open{z-index:9999}#atlasDialog select{background:#243432;color:white}
+</style><dialog class="expDialog" id="infoSheet"><form method="dialog"><button>关闭</button></form><h2 id="sheetTitle"></h2><pre id="sheetText"></pre></dialog>
+<dialog class="expDialog" id="atlasDialog"><form method="dialog"><button>返回聚落</button></form><h2>世界 · 远征</h2><div id="atlas"></div><p id="atlasInfo"></p><select id="crewPick" multiple aria-label="远征队员"></select><button id="depart"></button><p id="tripStatus"></p></dialog>
+<dialog class="expDialog" id="gameSettings"><form method="dialog"><button>关闭</button></form><h2>设置</h2><button id="systemSave">存档与读档</button><button id="systemDiag">系统诊断</button><button id="backTitle">保存并返回主界面</button></dialog><style>.expDialog{background:#242c2c;color:#eee2cc;border:1px solid #947c59;border-radius:8px;width:min(720px,90vw);max-height:80vh;overflow:auto;padding:22px}.expDialog::backdrop{background:#101716ae}.expDialog button{cursor:pointer;margin:3px;padding:6px 10px}.expDialog button:disabled{opacity:.55}.expDialog label,.expDialog label input{display:block;margin:.6em 0;width:100%}.expDialog pre{white-space:pre-wrap}.expDialog form{float:right}.pawn-card{cursor:pointer;text-align:left;color:inherit}</style>
+<dialog id="founderEdit" class="expDialog"><form method="dialog"><button>完成</button></form><h2>登陆人员档案</h2><div id="founderFace"></div><label>姓名<input id="founderName" maxlength="18" placeholder="输入姓名（不含尖括号或 &amp;）"></label><div id="axisFields"></div><h3>技能点</h3><div id="foundSkills"></div><button id="rollAxes">随机三维性格</button><button id="replaceFounder">换一位新人</button></dialog>
+<dialog id="factoryPanel" class="expDialog"><form method="dialog"><button>返回地图</button></form><h2>生产 · 产线运行</h2><p id="factoryPoints"></p><h3>新手引导</h3><button id="planLine" class="bevel-button">打开规划 → 生产</button><p>在同一行从西向东紧邻放置：筛矿井 → 中转带 → 连续熔炉 → 收货仓。中转带可延长线路。加工机可插在熔炉和仓库之间。每 120 tick 结算一轮，每五轮获得 1 知识。</p><h3>产线诊断</h3><pre id="lineStatus"></pre><p>收货仓累计入库　<span id="lineStock"></span></p></dialog>
+  <main class="game-shell hidden-ui" id="gameShell">
+<section class="boot" id="boot"><div class="boot-card surface"><h1>余烬协议 · 建立新殖民地</h1><div id="releaseStamp" style="display:inline-block;background:#233d36;color:#fff4cc;border:1px solid #c0a66d;padding:5px 12px;margin:3px 0">v0.9.1 · 原界面与逐格仓储</div><p class="boot-note">游戏尚未加载。完成全部选择并点击“载入殖民地”后，地图、人物和模拟时间才会初始化。</p><div class="boot-grid">
+<div><div class="choice-group"><h3>纪事风格</h3><div class="choice-row" id="storyChoices"><button class="choice selected" data-story="赫淮斯托斯的炉火">赫淮斯托斯的炉火<br><small>因果清晰，事故与生产优先</small></button><button class="choice" data-story="缪斯的长歌">缪斯的长歌<br><small>关系、承诺与个人抉择优先</small></button><button class="choice" data-story="摩伊赖的命线">摩伊赖的命线<br><small>派系、制度与时代转折优先</small></button></div></div><div class="choice-group"><h3>开局殖民者</h3><div class="choice-row" id="countChoices"><button class="choice" data-count="1">1人</button><button class="choice selected" data-count="3">3人</button><button class="choice" data-count="5">5人</button></div><div class="roster" id="roster"></div></div></div>
+<div><div class="choice-group"><h3>世界地图 · 选择落地区域</h3><div class="landing-map" id="landingMap"></div><div id="landingInfo">温带 · 温和四季 · 综合资源平衡</div></div><div class="choice-group"><label>开局物资难度　<select id="difficulty"><option>宽裕</option><option selected>标准</option><option>艰苦</option></select></label><h3>殖民地名称</h3><input id="colonyName" value="灰松谷聚落" style="width:100%;padding:8px;background:#111;color:white;border:1px solid #777"></div></div></div><button class="bevel-button start-button" id="startGame">载入殖民地</button><button id="resumeColony" class="bevel-button" hidden>继续上次聚落</button><button id="bootSlots" class="bevel-button">读取存档</button></div></section>
+
+    <section class="viewport" id="viewport" aria-label="殖民地地图">
+      <canvas id="mapCanvas" class="map-canvas"></canvas>
+      <div class="map-vignette"></div>
+    </section>
+
+    <section class="world-overlay" id="worldOverlay" aria-label="世界地图">
+      <div class="world-title"><h1>余烬世界</h1><p>行星视图 · 选择聚落或旅行目标</p></div>
+      <div class="planet"><button class="site-pin" id="sitePin" title="灰松谷聚落"></button></div><aside class="world-panel surface"><h3>落地区域</h3><div id="worldClimate">尚未载入</div><h3>发展时代</h3><div class="world-climates" id="eraList"></div></aside>
+    </section>
+
+    <header class="topbar">
+      <div class="resource-strip surface" aria-label="资源总览">
+        <div class="resource"><span>🪵 木材</span><strong>1,240</strong></div>
+        <div class="resource"><span>⛏ 钢铁</span><strong>680</strong></div>
+        <div class="resource"><span>◈ 银币</span><strong>2,935</strong></div>
+        <div class="resource"><span>🥫 食物</span><strong>438</strong></div>
+        <div class="resource"><span>🧱 石块</span><strong>720</strong></div>
+        <div class="resource"><span>⚙ 零件</span><strong>34</strong></div>
+        <div class="resource"><span>💊 药品</span><strong>18</strong></div>
+        <div class="resource"><span>⚡ 电力</span><strong style="color:#9ed78a">+1.2k</strong></div>
+      </div>
+      <div class="top-actions">
+        <button class="bevel-button" id="learnBtn" title="学习助手">?</button>
+        <button class="bevel-button" id="settingsBtn" title="设置">⚙</button>
+        <div class="date-card surface"><strong>余烬历 1年 春季 6日</strong>13:42 · 18℃ · 晴朗</div>
+      </div>
+    </header>
+
+    <section class="colonists" aria-label="殖民者列表">
+      <article class="colonist surface selected" data-name="林岚"><div class="portrait">●</div><div class="name">林岚</div><div class="mood"><i style="width:74%"></i></div></article>
+      <article class="colonist surface" data-name="松井"><div class="portrait" style="background:linear-gradient(145deg,#bca584,#776852)">▲</div><div class="name">松井</div><div class="mood"><i style="width:61%;background:#d0bb69"></i></div></article>
+      <article class="colonist surface" data-name="诺亚"><div class="portrait" style="background:linear-gradient(145deg,#91a5b2,#546975)">■</div><div class="name">诺亚</div><div class="mood"><i style="width:88%"></i></div></article>
+    </section>
+
+    <aside class="alerts" aria-label="警报">
+      <button class="alert danger surface" data-toast="跳转到：北侧围墙缺口"><b>!</b><span>殖民地需要防御<small>北侧仍有 12 格未封闭</small></span></button>
+      <button class="alert surface" data-toast="打开建筑规划"><b>⌂</b><span>殖民者需要床铺<small>还缺少 1 张已分配床位</small></span></button>
+    </aside>
+
+    <section class="event-log" aria-label="消息记录">
+      <div class="event-line"><time>13:21</time>诺亚已完成：简易研究台。</div>
+      <div class="event-line"><time>12:55</time>贸易队“赤沙商旅”正在经过附近区域。</div>
+      <div class="event-line"><time>12:10</time>收获季开始，气温正在下降。</div>
+    </section>
+
+    <aside class="inspector surface" id="inspector">
+      <div class="panel-title"><h2>检查器</h2><button class="close" id="closeInspector" aria-label="关闭">×</button></div>
+      <div class="inspector-body">
+        <div class="entity-head"><div class="entity-icon" id="entityIcon">♟</div><div class="entity-name"><strong id="entityName">林岚</strong><span id="entityType">殖民者 · 建造者</span></div></div>
+        <dl class="stat-grid"><dt>生命</dt><dd>100 / 100</dd><dt>心情</dt><dd>74%</dd><dt>当前工作</dt><dd>搬运木材</dd><dt>装备</dt><dd>制式步枪</dd><dt>所在区域</dt><dd id="tilePosition">(150, 150)</dd></dl>
+        <div><button class="bevel-button" id="moveSelected">指定移动地点</button> <label><input type="checkbox" id="staySelected"> 仅在居住区活动</label></div><div class="tabs"><button class="bevel-button active">概览</button><button class="bevel-button">需求</button><button class="bevel-button">健康</button><button class="bevel-button">社交</button><button class="bevel-button">日志</button></div>
+      </div>
+    </aside>
+
+    <div class="tile-readout" id="tileReadout">草地 · 土壤肥力 100% · 光照 82%</div>
+
+    <section class="drawer surface" id="architectDrawer" aria-label="建造菜单">
+      <div class="panel-title"><h2>规划建造</h2><button class="close" data-close-drawer>×</button></div>
+      <div class="drawer-content">
+        <nav class="category-list">
+          <button class="bevel-button active">命令</button><button class="bevel-button">区域</button><button class="bevel-button">建筑结构</button><button class="bevel-button">家具</button><button class="bevel-button">生产</button><button class="bevel-button">电力</button><button class="bevel-button">防御</button><button class="bevel-button">地板</button>
+        </nav>
+        <div class="build-grid">
+          <button class="build-item bevel-button" data-build="砍伐"><b>♣</b>砍伐</button>
+          <button class="build-item bevel-button" data-build="采矿"><b>◆</b>采矿</button>
+          <button class="build-item bevel-button" data-build="搬运"><b>↗</b>搬运</button>
+          <button class="build-item bevel-button" data-build="拆除"><b>⌫</b>拆除</button>
+          <button class="build-item bevel-button" data-build="储存区"><b>▦</b>储存区</button>
+          <button class="build-item bevel-button" data-build="种植区"><b>▧</b>种植区</button>
+          <button class="build-item bevel-button" data-build="允许"><b>✓</b>允许</button>
+          <button class="build-item bevel-button" data-build="禁止"><b>×</b>禁止</button>
+        </div>
+      </div>
+    </section>
+
+    
+<section class="system-window surface" id="researchWindow"><div class="system-head"><h2>研究与制度</h2><button class="close" data-close-window>×</button></div><div class="system-grid" id="techGrid"></div></section>
+<section class="system-window surface" id="policyWindow"><div class="system-head"><h2>政策树 · 历史制度演进</h2><button class="close" data-close-window>×</button></div><div class="system-grid" id="policyGrid"></div></section>
+<section class="system-window surface" id="productionWindow"><div class="system-head"><h2>生产知识 · 建筑与完整物品链</h2><button class="close" data-close-window>×</button></div><div class="system-grid" id="productionGrid"></div></section>
+<nav class="bottom-dock" aria-label="主菜单">
+      <div class="speed-controls">
+        <button class="bevel-button" data-speed="0">Ⅱ</button><button class="bevel-button active" data-speed="1">▶</button><button class="bevel-button" data-speed="2">▶▶</button><button class="bevel-button" data-speed="3">▶▶▶</button>
+      </div>
+      <div class="menu-row">
+        <button class="bevel-button" id="architectBtn">规划</button><button class="bevel-button" data-toast="工作优先级界面预留">工作</button><button class="bevel-button" data-toast="时间安排界面预留">日程</button><button class="bevel-button" data-toast="服装与药物策略预留">分配</button><button class="bevel-button" data-toast="动物管理界面预留">动物</button><button class="bevel-button" data-toast="野生动物界面预留">野生</button><button class="bevel-button" id="researchBtn">研究</button><button class="bevel-button" id="worldBtn">世界</button><dialog id="eventJournal" style="color:#e7deca;background:#252b2c;border:1px solid #997f57;width:min(660px,85vw);max-height:70vh"><form method="dialog"><button style="float:right">关闭</button></form><h2>聚落纪事</h2><button id="eventPolicy">查看政策</button><p>按时间倒序 · 最近 120 条活动记录</p><small>等待成员完成第一轮工作或生活活动。</small><ol style="line-height:1.8"></ol></dialog><button class="bevel-button" id="factoryBtn" style="display:none">产线</button><button class="bevel-button" id="historyBtn">纪事</button><button class="bevel-button" data-toast="派系关系界面预留">派系</button><button class="bevel-button" id="menuBtn">菜单</button>
+      </div>
+      <div class="view-controls"><button class="bevel-button" id="zoomOut">−</button><button class="bevel-button" id="zoomIn">＋</button></div>
+    </nav>
+
+    <div class="toast surface" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script src="./colony-game.js"></script>
+
+<style id="ember-patch-style">
+:root{--ember:#d27a45;--cyan:#75b9b4}.brand-ribbon{position:absolute;z-index:26;left:12px;top:58px;padding:5px 9px;font-size:11px;color:#f7d8bf;background:#3b251cdd;border:1px solid #966044;letter-spacing:.08em}.diag-panel{position:absolute;z-index:70;left:18px;top:92px;width:min(430px,42vw);display:none;padding:10px}.diag-panel.open{display:block}.diag-grid{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:12px}.diag-grid b{color:#b8dfda}.diag-actions{display:flex;gap:6px;margin-top:10px}.save-panel{position:absolute;z-index:80;inset:12% 22%;display:none;padding:14px;overflow:auto}.save-panel.open{display:block}.save-slots{display:grid;gap:8px}.save-slot{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px;background:#171a15;border:1px solid #5f604f}.nav-secondary{color:#a8d7d2!important}.system-window h2{color:#f2d8bc}.audit-line{font-size:11px;color:#b7b19c;border-top:1px solid #4e5042;padding-top:5px;margin-top:5px}.status-pill{display:inline-block;border:1px solid #6c7666;padding:1px 5px;margin-left:5px;color:#badeb1}.error-box{position:absolute;z-index:300;inset:auto 18px 76px 18px;display:none;background:#4b1715;color:#ffe1dd;border:1px solid #df746a;padding:10px;white-space:pre-wrap;max-height:28vh;overflow:auto}.error-box.open{display:block}
+</style>
+
+<section class="diag-panel surface" id="diagPanel"><div class="panel-title"><h2>系统诊断</h2><button class="close" id="closeDiag">×</button></div><div class="diag-grid" id="diagGrid"></div><div class="audit-line" id="diagAudit">固定种子与命令日志已启用。</div><div class="diag-actions"><button class="bevel-button" id="copyDiag">复制诊断摘要</button><button class="bevel-button" id="runSelfTest">运行自检</button></div></section>
+<section class="save-panel surface" id="savePanel"><div class="panel-title"><h2>余烬协议 · 存档槽</h2><button class="close" id="closeSave">×</button></div><p class="boot-note">存档保存模拟真相、种子、镜头、建筑、区域、科技、政策与命令审计摘要。版本：save-v1。</p><div class="save-slots" id="saveSlots"></div></section>
+<div class="error-box" id="globalError"></div>
+<script id="ember-framework-patch" src="./colony-framework.js"></script>
+
+
+<style id="people-org-style">
+.po-window{position:absolute;z-index:105;inset:72px 24px 70px;display:none;background:#171914f2;border:1px solid #77735e;box-shadow:0 12px 38px #000b;color:#ddd;overflow:hidden}.po-window.open{display:grid;grid-template-rows:auto 1fr}.po-head{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#292b23;border-bottom:1px solid #66614f}.po-head h2{font-size:15px;margin:0 auto 0 0;color:#f0d7bb}.po-body{display:grid;grid-template-columns:230px minmax(0,1fr) 310px;min-height:0}.po-list,.po-detail,.po-side{overflow:auto;padding:10px;border-right:1px solid #4d4d40}.po-side{border:0}.po-card{padding:8px;margin-bottom:6px;background:#20221c;border:1px solid #4b4d40;cursor:pointer}.po-card.active{border-color:#bc7f4e;background:#30261f}.po-card small{color:#aaa;display:block;margin-top:3px}.po-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.po-section{background:#20221c;border:1px solid #4b4d40;padding:9px;margin-bottom:9px}.po-section h3{font-size:12px;color:#9ed2cc;margin:0 0 7px}.meter{height:8px;background:#0d0e0c;border:1px solid #555;margin:3px 0 7px}.meter i{display:block;height:100%;background:#8faa71}.meter.warn i{background:#c99054}.tag{display:inline-block;border:1px solid #646757;padding:2px 5px;margin:2px;font-size:11px}.po-table{width:100%;border-collapse:collapse;font-size:11px}.po-table th,.po-table td{padding:5px;border-bottom:1px solid #424438;text-align:left;vertical-align:top}.po-table th{color:#9ed2cc;position:sticky;top:0;background:#20221c}.po-controls{display:flex;gap:5px;flex-wrap:wrap;margin:6px 0}.po-input,.po-select{background:#11130f;color:#ddd;border:1px solid #666;padding:5px;max-width:100%}.data-window .po-body{grid-template-columns:220px 1fr}.data-window .po-side{display:none}.mapping-ok{color:#acd29d}.mapping-warn{color:#e2b16f}.work-cell button{width:25px;padding:2px}.schedule-grid{display:grid;grid-template-columns:repeat(24,minmax(20px,1fr));gap:2px}.schedule-grid button{font-size:9px;padding:5px 1px;background:#283228;color:#ddd;border:1px solid #50584b}.schedule-grid button[data-s="睡眠"]{background:#27364a}.schedule-grid button[data-s="自由"]{background:#4a4327}.schedule-grid button[data-s="工作"]{background:#304a31}@media(max-width:900px){.po-window{inset:62px 8px 66px}.po-body{grid-template-columns:180px 1fr}.po-side{display:none}}
+</style>
+<section class="po-window" id="peopleWindow"><div class="po-head"><h2>人员系统 · PAWN / JOB / NEED / SKILL / MEMORY / REL</h2><span id="peopleTick"></span><button class="bevel-button" id="closePeople">关闭</button></div><div class="po-body"><aside class="po-list"><div class="po-controls"><input class="po-input" id="peopleSearch" placeholder="搜索姓名、岗位、技能"></div><div id="peopleList"></div></aside><main class="po-detail" id="peopleDetail"></main><aside class="po-side" id="peopleSide"></aside></div></section>
+<section class="po-window" id="orgWindow"><div class="po-head"><h2>组织系统 · ROLE / DEPT</h2><button class="bevel-button" id="closeOrg">关闭</button></div><div class="po-body"><aside class="po-list"><div class="po-controls"><input class="po-input" id="newDeptName" placeholder="新部门名称"><button class="bevel-button" id="addDept">建立</button></div><div id="deptList"></div></aside><main class="po-detail" id="deptDetail"></main><aside class="po-side" id="orgSide"></aside></div></section>
+<section class="po-window data-window" id="dataWindow"><div class="po-head"><h2>Excel内容库 · 全量游戏数据映射</h2><span id="mappingSummary"></span><button class="bevel-button" id="closeData">关闭</button></div><div class="po-body"><aside class="po-list" id="sheetList"></aside><main class="po-detail"><div class="po-controls"><input class="po-input" id="dataSearch" placeholder="搜索当前数据表"><select class="po-select" id="dataStatus"><option value="">全部状态</option><option>已确认</option><option>待讨论</option><option>草案</option></select></div><div id="dataTable"></div></main><aside class="po-side"></aside></div></section>
+<script id="people-org-system" src="./colony-people.js"></script>
+
+</body>
+</html>

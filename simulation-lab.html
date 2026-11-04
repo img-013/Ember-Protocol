@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>余烬协议 · v0.9.0</title>
+<link rel="stylesheet" href="./game.css">
+</head>
+<body>
+<header><strong>余烬协议</strong><span class="version">v0.9.0 · 因果闭环</span><span id="clockText"></span><div class="spacer"></div><button data-speed="0">暂停</button><button data-speed="1">1×</button><button data-speed="3">3×</button><button id="saveBtn">保存</button><button id="loadBtn">读取</button><button id="importBtn">导入</button><button id="exportBtn">导出</button><button id="helpBtn">帮助</button></header>
+<div id="resources" class="resources"></div>
+<main>
+<aside><nav id="menus"><button data-panel="build">规划</button><button data-panel="people">人员</button><button data-panel="research">研究与政策</button><button data-panel="history">纪事</button><button data-panel="diagnostics">诊断</button></nav><div id="sidebar"></div></aside>
+<section class="world"><div id="tools"><button data-tool="inspect">查看</button><button data-tool="harvest">框选采集</button><button data-tool="stock">框选储存区</button><button data-tool="home">框选居住区</button><button data-tool="move">指挥移动</button></div><canvas id="map" aria-label="聚落地图"></canvas><p id="mapHint">选择规划设施或拖动框选。点击人物查看任务。</p><div id="issues"></div><div id="notice" role="status"></div><div id="proposals"></div></section>
+<aside><h2>检查器</h2><div id="inspector"></div><h2>任务队列</h2><div id="jobs"></div></aside>
+</main>
+<footer><span id="summary"></span><button id="replayBtn">验证本局回放</button><button id="newBtn">新聚落</button><a href="./L4-REPORT.md" target="_blank">验收范围</a></footer>
+<dialog id="dialog"><form method="dialog"><button>关闭</button></form><h2 id="dialogTitle"></h2><div id="dialogBody"></div></dialog>
+<input type="file" id="importFile" accept=".json" hidden>
+<script type="module" src="./client.js"></script>
+</body></html>
