@@ -1,4 +1,4 @@
-import {fact} from './colony-runtime.js';
+import {fact} from './colony-runtime.js?v=0.9.2';
 const FOOD='ITM-FOOD';
 export function rationCount(g, source) {
   if(source==='camp') return Math.max(0,(g.inventory[FOOD]||0)-Object.values(g.stockCells||{}).reduce((n,c)=>n+(c.item===FOOD?c.amount:0),0));
@@ -25,3 +25,4 @@ export function eatRation(g,p,source) {
   p.memories.unshift({factId:f.id,appraisal:f.text,intensity:2});p.memories.splice(24);
   return true;
 }
+

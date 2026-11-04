@@ -1,5 +1,5 @@
-import * as runtime from './colony-runtime.js';
-import * as needs from './colony-needs.js';
+import * as runtime from './colony-runtime.js?v=0.9.2';
+import * as needs from './colony-needs.js?v=0.9.2';
 window.emberRuntime = runtime;
 window.emberNeeds = needs;
 // Keep legacy catalog declarations in their shared classic-script scope while
@@ -8,7 +8,7 @@ try {
   for (const file of ['colony-game.js','colony-framework.js','colony-people.js']) {
     await new Promise((resolve,reject) => {
       const script=document.createElement('script');
-      script.src=new URL(file,import.meta.url).href;
+      script.src=new URL(file+'?v=0.9.2',import.meta.url).href;
       script.onload=resolve;
       script.onerror=()=>reject(new Error('无法加载 '+file));
       document.body.append(script);
