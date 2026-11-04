@@ -9,3 +9,5 @@
 v0.9.0 技术实验单独保留在 simulation-lab.html；其 engine.js / tests.mjs / L4-REPORT.md 不代表正式恢复版的完成等级。原 GitHub 更早快照保留于 legacy.html。
 
 后续开发必须在原 UI 和地图规模上增量完善，不得以另一套简化游戏替换。两份开发标准继续执行，剧情切片仅作参考。底层移植需逐项验证、保留功能及旧存档路径。
+
+当前增量版本 v0.9.2：详见 [COLONY-PROGRESS.md](COLONY-PROGRESS.md)。正式游戏测试：npm test；实验室测试单独 npm run test:lab。启动新增 colony-bootstrap.js / colony-runtime.js。

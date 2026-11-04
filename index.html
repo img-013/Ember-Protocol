@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>余烬协议 · 殖民地工业纪事 · 开发骨架 · v0.9.1 原界面恢复</title>
+  <title>余烬协议 · 殖民地工业纪事 · 开发骨架 · v0.9.2 原界面恢复</title>
   <style>
     :root {
       --bg: #171914;
@@ -222,7 +222,8 @@
 </style>
 <style id="readableControls">
 button:not(:disabled),select{color:#f7f5e9;background-color:#35433e}button:hover:not(:disabled){filter:brightness(1.15);outline:1px solid #bbd7ae;outline-offset:-1px}button:focus-visible{outline:2px solid #ffe199!important;outline-offset:1px}button:active:not(:disabled){filter:brightness(.86);box-shadow:inset 0 0 0 2px #ffe3a0;translate:0 1px}.sys-card select,.po-window button,.treeTabs button,#lawOption,dialog button,#difficulty,#bootSlots,#resumeColony{background:#30443f!important;color:#fff9e9!important}.treeTabs{display:flex;gap:6px;margin-bottom:6px}.treeTabs button{padding:6px 15px}.treeTabs [aria-pressed="true"]{box-shadow:inset 0 -3px #edc883}.treeBoard .node{color:#f5f2df;transition:transform .12s,box-shadow .12s}.treeBoard .node.picked{transform:scale(1.055);z-index:2;background:#39594f;border-color:#f3cb80;box-shadow:0 0 0 2px #e7b865}.node.required{outline:2px solid #8dd3bd}.edges path.lit{stroke:#ffd17b;stroke-width:3.4}.miniFace{float:left;width:32px;height:32px;margin-right:5px}#founderFace{width:55px;height:55px}.healthParts{display:flex;gap:6px;flex-wrap:wrap}.healthParts span{background:#232d28;padding:4px 7px}.treeBoard button:disabled,button:disabled{cursor:not-allowed}button,pointer{touch-action:manipulation}
-</style></head>
+</style><link rel="stylesheet" href="./colony-ui.css">
+</head>
 <body><style>
 .expDialog button,#founderEdit button{color:#fff8e5;background:#394b49;border:1px solid #9aaf9d;border-radius:4px}.expDialog button:focus-visible,.expDialog button:hover{outline:2px solid #dfc786}.expDialog button:disabled{color:#adb4ac;background:#293233}.expDialog svg,#landingMap svg{display:block;width:100%;height:100%}#landingMap{height:auto;aspect-ratio:257/144;background:#2b3935}#landingMap g,#atlas g{cursor:pointer}#atlas{max-height:40vh;aspect-ratio:257/144;margin:auto}#crewPick{min-width:9em;vertical-align:middle}.portrait svg,.entity-icon svg{height:100%;max-width:100%}#diagBtn,#dataBtn,#menuBtn{display:none!important}#architectDrawer .build-grid{overflow-y:scroll;max-height:min(42vh,330px);align-content:start;scrollbar-gutter:stable}#inspector .stat-grid{max-height:22vh;overflow:auto}#techGrid{display:block}.treeScroll{overflow:auto;height:40vh;background:#202925}.treeBoard{position:relative}.edges{position:absolute;width:100%;height:100%;stroke:#819c88;stroke-width:1.5;fill:none}.node{position:absolute;width:118px;height:36px;color:#bcc5bc;background:#39423c;border:1px solid #647065;text-align:left}.node.ready{color:#fff2cc;border-color:#b6a276}.node.done{background:#3f6958;color:white}.node svg{width:16px;height:16px;vertical-align:middle;margin-right:5px}#studyInfo,#foundSkills{padding:10px;background:#192422;color:#f4e8c9}#sheetText{line-height:1.7}.viewport{touch-action:none}#savePanel.open{z-index:9999}#atlasDialog select{background:#243432;color:white}
 </style><dialog class="expDialog" id="infoSheet"><form method="dialog"><button>关闭</button></form><h2 id="sheetTitle"></h2><pre id="sheetText"></pre></dialog>
@@ -231,7 +232,7 @@ button:not(:disabled),select{color:#f7f5e9;background-color:#35433e}button:hover
 <dialog id="founderEdit" class="expDialog"><form method="dialog"><button>完成</button></form><h2>登陆人员档案</h2><div id="founderFace"></div><label>姓名<input id="founderName" maxlength="18" placeholder="输入姓名（不含尖括号或 &amp;）"></label><div id="axisFields"></div><h3>技能点</h3><div id="foundSkills"></div><button id="rollAxes">随机三维性格</button><button id="replaceFounder">换一位新人</button></dialog>
 <dialog id="factoryPanel" class="expDialog"><form method="dialog"><button>返回地图</button></form><h2>生产 · 产线运行</h2><p id="factoryPoints"></p><h3>新手引导</h3><button id="planLine" class="bevel-button">打开规划 → 生产</button><p>在同一行从西向东紧邻放置：筛矿井 → 中转带 → 连续熔炉 → 收货仓。中转带可延长线路。加工机可插在熔炉和仓库之间。每 120 tick 结算一轮，每五轮获得 1 知识。</p><h3>产线诊断</h3><pre id="lineStatus"></pre><p>收货仓累计入库　<span id="lineStock"></span></p></dialog>
   <main class="game-shell hidden-ui" id="gameShell">
-<section class="boot" id="boot"><div class="boot-card surface"><h1>余烬协议 · 建立新殖民地</h1><div id="releaseStamp" style="display:inline-block;background:#233d36;color:#fff4cc;border:1px solid #c0a66d;padding:5px 12px;margin:3px 0">v0.9.1 · 原界面与逐格仓储</div><p class="boot-note">游戏尚未加载。完成全部选择并点击“载入殖民地”后，地图、人物和模拟时间才会初始化。</p><div class="boot-grid">
+<section class="boot" id="boot"><div class="boot-card surface"><h1>余烬协议 · 建立新殖民地</h1><div id="releaseStamp" style="display:inline-block;background:#233d36;color:#fff4cc;border:1px solid #c0a66d;padding:5px 12px;margin:3px 0">v0.9.2 · 原界面与逐格仓储</div><p class="boot-note">游戏尚未加载。完成全部选择并点击“载入殖民地”后，地图、人物和模拟时间才会初始化。</p><div class="boot-grid">
 <div><div class="choice-group"><h3>纪事风格</h3><div class="choice-row" id="storyChoices"><button class="choice selected" data-story="赫淮斯托斯的炉火">赫淮斯托斯的炉火<br><small>因果清晰，事故与生产优先</small></button><button class="choice" data-story="缪斯的长歌">缪斯的长歌<br><small>关系、承诺与个人抉择优先</small></button><button class="choice" data-story="摩伊赖的命线">摩伊赖的命线<br><small>派系、制度与时代转折优先</small></button></div></div><div class="choice-group"><h3>开局殖民者</h3><div class="choice-row" id="countChoices"><button class="choice" data-count="1">1人</button><button class="choice selected" data-count="3">3人</button><button class="choice" data-count="5">5人</button></div><div class="roster" id="roster"></div></div></div>
 <div><div class="choice-group"><h3>世界地图 · 选择落地区域</h3><div class="landing-map" id="landingMap"></div><div id="landingInfo">温带 · 温和四季 · 综合资源平衡</div></div><div class="choice-group"><label>开局物资难度　<select id="difficulty"><option>宽裕</option><option selected>标准</option><option>艰苦</option></select></label><h3>殖民地名称</h3><input id="colonyName" value="灰松谷聚落" style="width:100%;padding:8px;background:#111;color:white;border:1px solid #777"></div></div></div><button class="bevel-button start-button" id="startGame">载入殖民地</button><button id="resumeColony" class="bevel-button" hidden>继续上次聚落</button><button id="bootSlots" class="bevel-button">读取存档</button></div></section>
 
@@ -327,16 +328,16 @@ button:not(:disabled),select{color:#f7f5e9;background-color:#35433e}button:hover
     <div class="toast surface" id="toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script src="./colony-game.js"></script>
+  
 
 <style id="ember-patch-style">
 :root{--ember:#d27a45;--cyan:#75b9b4}.brand-ribbon{position:absolute;z-index:26;left:12px;top:58px;padding:5px 9px;font-size:11px;color:#f7d8bf;background:#3b251cdd;border:1px solid #966044;letter-spacing:.08em}.diag-panel{position:absolute;z-index:70;left:18px;top:92px;width:min(430px,42vw);display:none;padding:10px}.diag-panel.open{display:block}.diag-grid{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:12px}.diag-grid b{color:#b8dfda}.diag-actions{display:flex;gap:6px;margin-top:10px}.save-panel{position:absolute;z-index:80;inset:12% 22%;display:none;padding:14px;overflow:auto}.save-panel.open{display:block}.save-slots{display:grid;gap:8px}.save-slot{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px;background:#171a15;border:1px solid #5f604f}.nav-secondary{color:#a8d7d2!important}.system-window h2{color:#f2d8bc}.audit-line{font-size:11px;color:#b7b19c;border-top:1px solid #4e5042;padding-top:5px;margin-top:5px}.status-pill{display:inline-block;border:1px solid #6c7666;padding:1px 5px;margin-left:5px;color:#badeb1}.error-box{position:absolute;z-index:300;inset:auto 18px 76px 18px;display:none;background:#4b1715;color:#ffe1dd;border:1px solid #df746a;padding:10px;white-space:pre-wrap;max-height:28vh;overflow:auto}.error-box.open{display:block}
 </style>
 
 <section class="diag-panel surface" id="diagPanel"><div class="panel-title"><h2>系统诊断</h2><button class="close" id="closeDiag">×</button></div><div class="diag-grid" id="diagGrid"></div><div class="audit-line" id="diagAudit">固定种子与命令日志已启用。</div><div class="diag-actions"><button class="bevel-button" id="copyDiag">复制诊断摘要</button><button class="bevel-button" id="runSelfTest">运行自检</button></div></section>
-<section class="save-panel surface" id="savePanel"><div class="panel-title"><h2>余烬协议 · 存档槽</h2><button class="close" id="closeSave">×</button></div><p class="boot-note">存档保存模拟真相、种子、镜头、建筑、区域、科技、政策与命令审计摘要。版本：save-v1。</p><div class="save-slots" id="saveSlots"></div></section>
+<section class="save-panel surface" id="savePanel"><div class="panel-title"><h2>余烬协议 · 存档槽</h2><button class="close" id="closeSave">×</button></div><p class="boot-note">存档保存模拟真相、种子、镜头、建筑、区域、科技、政策与命令审计摘要。版本：save-v2。</p><div class="save-slots" id="saveSlots"></div></section>
 <div class="error-box" id="globalError"></div>
-<script id="ember-framework-patch" src="./colony-framework.js"></script>
+
 
 
 <style id="people-org-style">
@@ -345,7 +346,8 @@ button:not(:disabled),select{color:#f7f5e9;background-color:#35433e}button:hover
 <section class="po-window" id="peopleWindow"><div class="po-head"><h2>人员系统 · PAWN / JOB / NEED / SKILL / MEMORY / REL</h2><span id="peopleTick"></span><button class="bevel-button" id="closePeople">关闭</button></div><div class="po-body"><aside class="po-list"><div class="po-controls"><input class="po-input" id="peopleSearch" placeholder="搜索姓名、岗位、技能"></div><div id="peopleList"></div></aside><main class="po-detail" id="peopleDetail"></main><aside class="po-side" id="peopleSide"></aside></div></section>
 <section class="po-window" id="orgWindow"><div class="po-head"><h2>组织系统 · ROLE / DEPT</h2><button class="bevel-button" id="closeOrg">关闭</button></div><div class="po-body"><aside class="po-list"><div class="po-controls"><input class="po-input" id="newDeptName" placeholder="新部门名称"><button class="bevel-button" id="addDept">建立</button></div><div id="deptList"></div></aside><main class="po-detail" id="deptDetail"></main><aside class="po-side" id="orgSide"></aside></div></section>
 <section class="po-window data-window" id="dataWindow"><div class="po-head"><h2>Excel内容库 · 全量游戏数据映射</h2><span id="mappingSummary"></span><button class="bevel-button" id="closeData">关闭</button></div><div class="po-body"><aside class="po-list" id="sheetList"></aside><main class="po-detail"><div class="po-controls"><input class="po-input" id="dataSearch" placeholder="搜索当前数据表"><select class="po-select" id="dataStatus"><option value="">全部状态</option><option>已确认</option><option>待讨论</option><option>草案</option></select></div><div id="dataTable"></div></main><aside class="po-side"></aside></div></section>
-<script id="people-org-system" src="./colony-people.js"></script>
 
+
+<script type="module" src="./colony-bootstrap.js"></script>
 </body>
 </html>

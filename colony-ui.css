@@ -1,0 +1,4 @@
+/* Preserve the original theme; keep long skill lists from squeezing labels. */
+#inspector .stat-grid { grid-template-columns: 5em minmax(0, 1fr); gap: 7px 10px; }
+#inspector .stat-grid dt { white-space: nowrap; }
+#inspector .stat-grid dd { min-width: 0; overflow-wrap: anywhere; line-height: 1.5; }
